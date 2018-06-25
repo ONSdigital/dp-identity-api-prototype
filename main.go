@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -16,21 +17,24 @@ var mockSessionID = "12345-abcde-67890-fghij"
 var mockUserPassword = "one two three four"
 
 type MockedUser struct {
-	Email    string
-	Password string
-	Migrated bool
+	Email         string
+	Password      string
+	Migrated      bool
+	EncryptionKey string
 }
 
-var MockedUsers = map[string]MockedUser{
+var MockedUsers = map[string]*MockedUser{
 	"test@test.com": {
-		Email:    "test@test.com",
-		Password: "one two three four",
-		Migrated: false,
+		Email:         "test@test.com",
+		Password:      "one two three four",
+		Migrated:      false,
+		EncryptionKey: "encryption key for test@test.com",
 	},
 	"test-identity-api@email.com": {
-		Email:    "test-identity-api@email.com",
-		Password: "one two three four",
-		Migrated: false,
+		Email:         "test-identity-api@email.com",
+		Password:      "one two three four",
+		Migrated:      false,
+		EncryptionKey: "encryption key for test-identity-api@email.com",
 	},
 }
 
@@ -39,6 +43,7 @@ func main() {
 	r.Path("/login").Methods("POST").HandlerFunc(loginHandler)
 	// r.Path("/users").Methods("POST").HandlerFunc(userHandler)
 	r.Path("/validate").Methods("POST").HandlerFunc(validateSessionHandler)
+	r.Path("/migrate").Methods("POST").HandlerFunc(migrateUserHandler)
 
 	log.Debug("Starting server", log.Data{
 		"bind_addr": bindAddr,
@@ -83,7 +88,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		"email": loginCreds.Email,
 	})
 
-	var user MockedUser
+	var user *MockedUser
 	var ok bool
 
 	if user, ok = MockedUsers[loginCreds.Email]; !ok {
@@ -169,4 +174,30 @@ func validateSessionHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(json)
+}
+
+func migrateUserHandler(w http.ResponseWriter, r *http.Request) {
+	log.DebugR(r, "Migrating user", nil)
+	err := r.ParseForm()
+	if err != nil {
+		log.Error(err, nil)
+	}
+
+	//username := r.URL.Query().Get("email")
+	//password := r.URL.Query().Get("password")
+
+	username := r.FormValue("email")
+	password := r.FormValue("password")
+
+	fmt.Println("USERNAME:", username, "PASSWORD:", password)
+
+	if user, ok := MockedUsers[username]; ok {
+		log.Debug("User found", nil)
+		user.Migrated = true
+		user.Password = password
+		w.Write([]byte(user.EncryptionKey))
+		return
+	}
+	log.Debug("User not found", nil)
+	w.WriteHeader(http.StatusNotFound)
 }
