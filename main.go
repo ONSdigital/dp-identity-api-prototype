@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -62,25 +60,61 @@ type Session struct {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	log.DebugR(r, "Logging in user", nil)
-	buf := new(bytes.Buffer)
-	session := Session{
-		ID: mockSessionID,
-	}
-	b, err := json.Marshal(session)
+
+	log.DebugR(r, "Handling login request", nil)
+
+	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Error(err, nil)
 		return
 	}
+	defer r.Body.Close()
 
-	err = binary.Write(buf, binary.BigEndian, &b)
+	var loginCreds LoginFields
+	err = json.Unmarshal(data, &loginCreds)
 	if err != nil {
 		log.Error(err, nil)
+		w.WriteHeader(400)
+		w.Write([]byte("Unrecognised login data"))
 		return
 	}
 
-	log.DebugR(r, "Returning valid session ID", nil)
-	w.Write(b)
+	log.DebugR(r, "Checking whether login is valid", log.Data{
+		"email": loginCreds.Email,
+	})
+
+	var user MockedUser
+	var ok bool
+
+	if user, ok = MockedUsers[loginCreds.Email]; !ok {
+		log.DebugR(r, "Email address not recognised", log.Data{
+			"email": loginCreds.Email,
+		})
+		w.WriteHeader(401)
+		w.Write([]byte("Email address not recognised"))
+		return
+	}
+
+	if loginCreds.Password != user.Password {
+		log.DebugR(r, "Login attempt failed due to incorrect password", log.Data{
+			"email": user.Email,
+		})
+		w.WriteHeader(401)
+		w.Write([]byte("Unable to login because password is incorrect"))
+		return
+	}
+
+	if user.Migrated == false {
+		log.DebugR(r, "User is not migrated", log.Data{
+			"email": user.Email,
+		})
+		w.WriteHeader(303)
+		w.Write([]byte("Unable to login because user is not migrated"))
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte("i-am-an-access-token"))
 }
 
 // func userHandler(w http.ResponseWriter, r *http.Request) {

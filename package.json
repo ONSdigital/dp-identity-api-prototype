@@ -4,13 +4,15 @@
   "description": "Acceptance tests for identity API",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "test": "jest"
   },
   "author": "Crispin Merriman",
   "license": "MIT",
   "dependencies": {
     "babel-core": "^6.26.3",
     "babel-jest": "^23.0.1",
+    "babel-preset-env": "^1.7.0",
+    "fs-extra": "^6.0.1",
     "jest": "^23.1.0",
     "node-fetch": "^2.1.2"
   }
