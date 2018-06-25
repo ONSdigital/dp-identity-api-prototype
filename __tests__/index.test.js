@@ -6,6 +6,7 @@ const userJSON = {"passwordHash":"pyoLEXCvzEiY218C9VTHRzPbOHqgghLsPhftp9qLvRRx8t
 
 const config = {
     identityAPIUrl: process.env.IDENTITY_API_URL || "http://localhost:23700",
+    zebedeeUrl: process.env.ZEBEDEE_URL || "http://localhost:8082",
     zebedeeDir: `${process.env.zebedee_root}/zebedee`,
 };
 
@@ -64,8 +65,31 @@ describe("Unmigrated user login", () => {
         }
     });
 
-    it.skip("Zebedee returns 200 on first attempt to login after migration", () => {
+    it("Zebedee returns 200 on first attempt to login after migration", async () => {
+        const body = {
+            email: "test-identity-api@email.com",
+            password: "one two three four"
+        };
+        try {
+            const response = await request(`${config.zebedeeUrl}/login`, null, "POST", body);
+            expect(response).toBe("User has been migrated");
+        } catch (error) {
+            fail("Expected 200 response from Zebedee");
+        }
 
+    });
+
+    it("Zebedee returns error when login in as migrated user", async () => {
+        const body = {
+            email: "test-identity-api@email.com",
+            password: "one two three four"
+        };
+        try {
+            const response = await request(`${config.zebedeeUrl}/login`, null, "POST", body);
+            fail("Expected 401 response from Zebedee but received 200");
+        } catch (error) {
+            expect(error.status).toBe(401);
+        }
     });
     
     it.skip("Identity API returns access token on attempt after user's successful login to Zebedee", () => {
