@@ -183,9 +183,6 @@ func migrateUserHandler(w http.ResponseWriter, r *http.Request) {
 		log.Error(err, nil)
 	}
 
-	//username := r.URL.Query().Get("email")
-	//password := r.URL.Query().Get("password")
-
 	username := r.FormValue("email")
 	password := r.FormValue("password")
 
