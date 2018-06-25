@@ -1,0 +1,17 @@
+{
+  "name": "dp-identity-api-tests",
+  "version": "0.0.1",
+  "description": "Acceptance tests for identity API",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "Crispin Merriman",
+  "license": "MIT",
+  "dependencies": {
+    "babel-core": "^6.26.3",
+    "babel-jest": "^23.0.1",
+    "jest": "^23.1.0",
+    "node-fetch": "^2.1.2"
+  }
+}
