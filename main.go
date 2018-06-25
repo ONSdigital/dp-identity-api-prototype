@@ -17,6 +17,25 @@ var bindAddr = ":23700"
 var mockSessionID = "12345-abcde-67890-fghij"
 var mockUserPassword = "one two three four"
 
+type MockedUser struct {
+	Email    string
+	Password string
+	Migrated bool
+}
+
+var MockedUsers = map[string]MockedUser{
+	"test@test.com": {
+		Email:    "test@test.com",
+		Password: "one two three four",
+		Migrated: false,
+	},
+	"test-identity-api@email.com": {
+		Email:    "test-identity-api@email.com",
+		Password: "one two three four",
+		Migrated: false,
+	},
+}
+
 func main() {
 	r := mux.NewRouter()
 	r.Path("/login").Methods("POST").HandlerFunc(loginHandler)
