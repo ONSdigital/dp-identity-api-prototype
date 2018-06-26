@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -210,8 +209,6 @@ func migrateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	username := r.FormValue("email")
 	password := r.FormValue("password")
-
-	fmt.Println("USERNAME:", username, "PASSWORD:", password)
 
 	if user, ok := MockedUsers[username]; ok {
 		log.Debug("User found", nil)
