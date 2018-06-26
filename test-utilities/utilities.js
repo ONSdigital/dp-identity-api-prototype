@@ -2,13 +2,16 @@ import fetch from 'node-fetch';
 
 export async function request(URL, accessToken, method, body) {
     const options = {
-        body: JSON.stringify(body),
         method,
         headers: {}
     }
 
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+
     if (accessToken) {
-        options.headers = accessToken
+        options.headers["X-Florence-Token"] = accessToken;
     }
 
     const response = await fetch(URL, options);

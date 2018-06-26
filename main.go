@@ -13,7 +13,7 @@ import (
 )
 
 var bindAddr = ":23700"
-var mockSessionID = "12345-abcde-67890-fghij"
+var mockAccessToken = "12345-abcde-67890-fghij"
 var mockUserPassword = "one two three four"
 
 type MockedUser struct {
@@ -38,11 +38,15 @@ var MockedUsers = map[string]*MockedUser{
 	},
 }
 
+var MockedAccessTokens = map[string]string{
+	"12345-abcde-67890-fghij": "test-identity-api@email.com",
+}
+
 func main() {
 	r := mux.NewRouter()
 	r.Path("/login").Methods("POST").HandlerFunc(loginHandler)
 	// r.Path("/users").Methods("POST").HandlerFunc(userHandler)
-	r.Path("/validate").Methods("POST").HandlerFunc(validateSessionHandler)
+	r.Path("/validate").Methods("POST").HandlerFunc(validateAccessTokenHandler)
 	r.Path("/migrate").Methods("POST").HandlerFunc(migrateUserHandler)
 
 	log.Debug("Starting server", log.Data{
@@ -60,7 +64,7 @@ type LoginFields struct {
 	Password string `json:"password"`
 }
 
-type Session struct {
+type AccessToken struct {
 	ID string `json:"id"`
 }
 
@@ -119,58 +123,79 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
-	w.Write([]byte("i-am-an-access-token"))
+	w.Write([]byte(mockAccessToken))
 }
 
 // func userHandler(w http.ResponseWriter, r *http.Request) {
 
 // }
 
-type ValidSessionResponse struct {
-	Email    string `json:"email"`
-	Type     string `json:"type"`
-	Password string `json:"password"`
+type ValidAccessTokenResponse struct {
+	Email         string `json:"email"`
+	EncryptionKey string `json:"encryptionKey"`
+	// Type     string `json:"type"`
 }
 
-func validateSessionHandler(w http.ResponseWriter, r *http.Request) {
-	log.DebugR(r, "Validating session ID", nil)
-	log.DebugR(r, r.Header.Get("Content-type"), nil)
+func validateAccessTokenHandler(w http.ResponseWriter, r *http.Request) {
+	log.DebugR(r, "Validating access token", nil)
+	// log.DebugR(r, r.Header.Get("Content-type"), nil)
 
-	data, err := ioutil.ReadAll(r.Body)
+	// data, err := ioutil.ReadAll(r.Body)
+	// if err != nil {
+	// 	log.Error(err, nil)
+	// 	return
+	// }
+	// defer r.Body.Close()§
+
+	err := r.ParseForm()
 	if err != nil {
 		log.Error(err, nil)
-		return
 	}
-	defer r.Body.Close()
 
-	var session Session
-	err = json.Unmarshal(data, &session)
-	if err != nil {
-		log.Error(err, nil)
+	accessToken := AccessToken{
+		ID: r.FormValue("id"),
+	}
+	// err = json.Unmarshal(data, &accessToken)
+	// if err != nil {
+	// 	log.Error(err, nil)
+	// 	w.WriteHeader(400)
+	// 	w.Write([]byte("Unrecognised data structure"))
+	// 	return
+	// }
+
+	if accessToken.ID == "" {
 		w.WriteHeader(400)
-		w.Write([]byte("Unrecognised data structure"))
+		w.Write([]byte("Must contain an access token"))
 		return
 	}
 
-	if session.ID == "" {
-		w.WriteHeader(400)
-		w.Write([]byte("Must contain a session ID"))
-		return
-	}
-
-	if session.ID != mockSessionID {
+	if accessToken.ID != mockAccessToken {
 		w.WriteHeader(401)
 		return
 	}
 
-	response := ValidSessionResponse{
-		Email:    "crispin.merriman@gmail.com",
-		Type:     "ADMIN",
-		Password: mockUserPassword,
+	var email string
+	var ok bool
+	if email, ok = MockedAccessTokens[accessToken.ID]; !ok {
+		w.WriteHeader(401)
+		w.Write([]byte("Invalid access token"))
+		return
+	}
+
+	var user *MockedUser
+	if user, ok = MockedUsers[email]; !ok {
+		w.WriteHeader(500)
+		w.Write([]byte("Error finding email address for this access token"))
+		return
+	}
+
+	response := ValidAccessTokenResponse{
+		Email:         user.Email,
+		EncryptionKey: user.EncryptionKey,
 	}
 	json, err := json.Marshal(response)
 
-	log.DebugR(r, "Returning valid access token", nil)
+	log.DebugR(r, "Returning valid encryption key", nil)
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(json)
